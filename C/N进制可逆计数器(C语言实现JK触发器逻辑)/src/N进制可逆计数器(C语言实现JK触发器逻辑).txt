@@ -1,0 +1,260 @@
+/*                ********N进制可逆计数器程序设计要求部分********
+	1.用户自由输入,默认数字键有效
+    2.出现进制选择界面
+	3.出现正负方向计数选择
+	4.以间隔0.5秒输出计数
+	5.输出时钟脉冲信号,输出进位信号
+*/
+
+/*                           ******设计说明部分****** 
+    1.程序实现了用户自由自由输入,自动过滤无效字符的高容错性功能
+    2.宏定义B用于保存用户输入的十进制数的加权位,默认下容纳3位,即默认最大为999进制计数器
+    3.输入所需进制之前,要合理提供时钟脉冲信号,少了体现不计数规律性,多了浪费存储空间
+    4.计数间隔时间默认为0.5秒,也可根据需要调整到1s到2s
+	5.本程序以脉冲数72个,输入进制数小于37,至少两次计数循环，计数间隔0.5秒,输出数据10个一行为默认数据
+	6.BUG说明:设计初衷为用户可自由循环输入,自行关闭程序,但每当程序运行一后,稳定状态下,需要用户按Enter键 3次 才能回归正常
+	7.运用独特的限制输入方式解决病源scanf()取输入流问题,成功解决6.BUG
+*/
+
+/****主程序开始****/
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <windows.h>
+#define  Time  500
+#define  K     10           //输出形式为10个数据一行
+#define  P     72         //提供脉冲数
+#define  B     3
+int main()
+{
+	int   i=0,k=0,w_1=0,s=0,Number[B]={0};
+	char  w_2,w1;
+	void  N_add(int s);     //加法计数器函数
+	void  N_sub(int s);     //减法计数器函数
+
+	//解决用户自由输入,提高容错性能
+	printf("********欢迎使用任意正整数可逆进制计数器!********\n");
+	printf("********请按照十进制数形式输入需要的进制数:\t");
+	//用户输入进制选择数据,按Enter键结束
+	for(i=0;i<20;i++)
+	{
+		w_2=getchar();
+		if(w_2=='\n')
+		{
+			if(k==0)
+			{
+				continue;
+			}
+			else
+			{
+				break;
+			}
+		}
+        else
+		{
+			w_1=w_2-48;
+		}
+		
+		if(w_1<=9 && w_1>=0)             //筛选出有效数字
+		{
+			Number[k]=w_1;
+			k++;
+		}
+		else
+		{
+			scanf("%c",&w1);
+			i--;
+		}
+	}
+
+	//计算输入的进制数的十进制数结果形式
+	for(i=0;i<k;i++)
+	{
+		s+=Number[i]*pow(10,k-1-i);       //这种方式得到的s为自动过滤无效字符的值
+	}
+
+	printf("********加/减计数器选择项:\n");
+	printf("********1.加法计数器(输出计数始态0-1)\n");
+	printf("********2.减法计数器(输出计数始态1-0)\n");
+	printf("***请输入 1 OR 2  :\t");
+
+	//用户输入计数器选择数据,按Enter键结束
+    for(i=0;i<20;i++)
+	{
+		w_2=getchar();
+		if(w_2=='\n')                //过滤掉回车换行键的影响
+		{
+             break;
+		}
+		if(w_2=='1')
+		{
+			N_add(s);
+			break;
+		}
+		if(w_2=='2')
+		{
+			N_sub(s);
+			break;
+		}
+		else
+		{
+			scanf("%c",&w1);
+			printf("\n Press '1' OR '2' to continue!\n");
+			i--;
+		}
+	}
+	printf("\n");
+	
+	system("pause");
+	system("cls");
+	main();
+	return 0;
+}
+
+//加法计数器设计
+//初态为0-1
+void N_add(int s)
+{
+	int i=0,j=0,m=0,n=0,S_N[P]={0},Y_N[P]={0},CLK[P]={0};
+
+	printf("********您选择的是%2d进制加法计数器,结果如下:\n",s);
+
+	//按照设计要求间隔输出计数结果
+	m=P/s;
+	n=P%s;
+	for(j=0;j<m;j++)           //模拟时钟脉冲在下跳沿时计数器进行加法循环工作
+	{
+		for(i=0;i<s;i++)
+		{
+			Sleep(Time);
+			CLK[i+s*j]=1;
+			if((i+1)%s==0)
+			{
+				Y_N[i+s*j]=1;
+				S_N[i+s*j]=0;
+			}
+			else
+			{
+				S_N[i+s*j]=i+1;
+			}
+			printf("%2d-%2d  ",Y_N[i+s*j],S_N[i+s*j]);
+			if((i+s*j+1)%K==0)
+			{
+				printf("\n");
+			}
+		}
+	}
+
+	for(i=m*s;i<P;i++)
+	{
+		Sleep(Time);
+		CLK[i]=1;
+		if((i+1)%s==0)
+			{
+				Y_N[i]=1;
+				S_N[i]=0;
+			}
+			else
+			{
+				S_N[i]=i-m*s+1;
+			}
+		printf("%2d-%2d  ",Y_N[i],S_N[i]);
+		if((i+1)%K==0)
+		{
+			printf("\n");
+		}
+	}
+
+	//输出脉冲作用信息
+	printf("\n********时钟脉冲信号信息如下:");
+	Sleep(2*Time);
+	printf("\n********1.负跳沿作用方式");
+	Sleep(2*Time);
+	printf("\n********2.脉冲个数:  %2d",P);
+	Sleep(2*Time);
+	printf("\n********3.脉冲作用信息如下:\n");
+	Sleep(Time);
+	for(i=0;i<P;i++)
+	{
+		Sleep(500);
+		printf("%d_",CLK[i]);
+		if((i+1)%K==0)
+		{
+			printf("\n");
+		}
+	}
+}
+
+//减法计数器设计
+//初态为1-0
+void N_sub(int s)
+{
+	int i=0,j=0,m=0,n=0,S_N[P]={0},Y_N[P]={0},CLK[P]={0};
+	printf("********您选择的是%2d进制减法计数器,结果如下:\n",s);
+
+
+	//按照设计要求间隔输出计数结果
+	m=P/s;
+	n=P%s;
+	for(j=0;j<m;j++)           //模拟时钟脉冲在下跳沿时计数器进行减法循环工作
+	{
+		for(i=0;i<s;i++)
+		{
+			Sleep(Time);
+			CLK[i+s*j]=1;
+			if(i%s==0)
+			{
+				Y_N[i+s*j]=1;
+				S_N[i+s*j]=0;
+			}
+			else
+			{
+				S_N[i+s*j]=s-i;
+			}
+			printf("%2d-%2d  ",Y_N[i+s*j],S_N[i+s*j]);
+			if((i+s*j+1)%K==0)
+			{
+				printf("\n");
+			}
+		}
+	}
+
+	for(i=m*s;i<P;i++)
+	{
+		Sleep(Time);
+		CLK[i]=1;
+		if(i%s==0)
+			{
+				Y_N[i]=1;
+				S_N[i]=0;
+			}
+			else
+			{
+				S_N[i]=s+m*s-i;
+			}
+		printf("%2d-%2d  ",Y_N[i],S_N[i]);
+		if((i+1)%K==0)
+		{
+			printf("\n");
+		}
+	}
+
+    //输出脉冲作用信息
+	printf("\n********时钟脉冲信号信息如下:");
+	Sleep(2*Time);
+	printf("\n********1.负跳沿作用方式");
+	Sleep(2*Time);
+	printf("\n********2.脉冲个数:  %2d",P);
+	Sleep(2*Time);
+	printf("\n********3.脉冲作用信息如下:\n");
+	Sleep(Time);
+	for(i=0;i<P;i++)
+	{
+		Sleep(500);
+		printf("%d_",CLK[i]);
+		if((i+1)%K==0)
+		{
+			printf("\n");
+		}
+	}
+}

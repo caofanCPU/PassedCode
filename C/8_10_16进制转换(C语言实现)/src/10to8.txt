@@ -1,0 +1,43 @@
+#include <stdlib.h>
+#include <stdio.h>
+#define Bit 16
+int main()
+{
+	int i,j,x,n,m,number,DtoO[Bit]={0};
+	static c=0;
+    printf("******Here is the basement of (10->8 ) Numerical-Systemm-Change World!******\n");
+	printf("**********Please input a Decline number:\n");
+	scanf("%d",&x);
+	number=x;
+	for(i=0;i<Bit;i++)
+	{
+		n=x/8;
+		m=x%8;   
+		x=n;
+		if(n!=0)
+		{
+			DtoO[i]=m;
+		}
+		else
+		{
+			DtoO[i]=m;
+			break;
+		}
+	}
+	printf("Input number is:%d D\n",number);
+	printf("Output numbers is:");
+	for(j=i;j>-1;j--)
+	{
+		printf("%d",DtoO[j]);
+	}
+	printf(" O(八进制数)\n");
+	system("pause");
+	c++;
+	if(c%4==0)
+	{
+		system("cls");
+	}
+	
+	main();
+	return 0;
+}

@@ -1,0 +1,58 @@
+10to16：
+#include <stdio.h>
+#include <stdlib.h>
+#define Bit 8
+int main ()
+{
+	int i,j,x,n,m,number,DtoH[Bit]={0};
+	static c=0;
+    printf("Here is the basement of (10->16):\n");
+	printf("Please input a Decline number:\n");
+	scanf("%d",&x);
+	number=x;
+	for(i=0;i<Bit;i++)
+	{
+		n=x/16;
+		m=x%16;   
+		x=n;
+		if(n!=0)
+		{
+			DtoH[i]=m;
+		}
+		else
+		{
+			DtoH[i]=m;
+			break;
+		}
+	}
+	printf("Input number is:%d D\n",number);
+	printf("Output numbers is:");
+	for(j=i;j>-1;j--)
+	{
+		switch(DtoH[j])
+		{
+		case 10: printf("A");
+			break;
+		case 11: printf("B");
+			break;
+		case 12: printf("C");
+			break;
+		case 13: printf("D");
+			break;
+		case 14: printf("E");
+			break;
+		case 15: printf("F");
+			break;
+		default: printf("%d",DtoH[j]);
+		}	
+	}
+	printf(" H\n");
+	c++;
+	system("pause");
+	if(c%4==0)
+	{
+		system("cls");
+	}
+	main();                      
+	return 0;
+}

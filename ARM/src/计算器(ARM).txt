@@ -1,0 +1,217 @@
+/*-------包含文件-------*/
+#include "def.h"
+#include "2410lib.h"
+#include "option.h"
+#include "2410addr.h"
+#include "interrupt.h"
+
+#define SEG0 0x3e
+#define SEG1 0x3d
+#define SEG2 0x3b
+#define SEG3 0x37
+#define SEG4 0x2f
+#define SEG5 0x1f
+
+/*----------栈定义---------*/
+#ifndef STACK_SIZE
+#define STACK_SIZE 64
+#endif
+
+int Num[STACK_SIZE]
+int NumTop=0;
+int Sym[STACK_SIZE];
+int SymTop=0;
+void Push(int * stack,int * top,int val);
+
+int Pop(int * stack,int * top);
+/*------------声明----------*/
+
+#define DELAYTIME 1
+extern unsigned char seg7table[16];
+void Delay(int time);
+void display(int num);
+int Calculate(int right,int left,int symbol);
+/*-------主函数---------*/
+void Main(void)
+{
+	/*---------配置系统时钟, 初始化端口, 初始化串口----------*/
+	ChangeClockDivider(1,1); 
+	ChangeMPllValue(0xa1,0x3,0x1); 
+	Port_Init();
+	Uart_Init(0,115200);
+	Uart_Select(0);
+	PRINTF("\n欢迎使用计算器\n");
+	/* --------------------------- */
+	char number[255];
+	char sign;
+	int now=0;
+	int num=0;
+	int SymTmp;
+	int ResTmp;
+	int Flag = 0;
+	while(1)
+	{
+		unsigned char ch;
+		ch=Key_GetKeyPoll();
+		Delay(1);
+		Delay(DELAYTIME);
+		if(ch>='0'&&ch<='9')
+		 {
+			num = (num*10)+(ch-'0');
+			Flag = 1;			
+		}
+		if(ch>=65&&ch<=70)
+		{
+			if(Flag)
+			{
+				Push(Num,&NumTop,num);
+				num = 0;
+				Flag = 0;
+			}
+			switch(ch)
+			{
+				case 65:    //对‘(’的处理(左括号)
+					Push(Sym,&SymTop,'(');
+					break;
+				case 66:    //对‘)’的处理(右括号)
+					while(SymTop!=0&&(SymTmp=Pop(Sym,&SymTop))!='(')
+					{
+						ResTmp=Calculate(Pop(Num,&NumTop),Pop(Num,&NumTop),SymTmp);
+						Push(Num,&NumTop,ResTmp);	    		
+					}
+					break;
+				case 67:     // 对‘+（加号）’的处理
+					if(SymTop!=0 && Sym[SymTop-1]!='(')
+					{ 
+						ResTmp=Calculate(Pop(Num,&NumTop),Pop(Num,&NumTop),Pop(Sym,&SymTop));
+						Push(Num,&NumTop,ResTmp);
+					}
+					Push(Sym,&SymTop,'+');
+					break;
+				case 68:   // 对‘*（乘号）’的处理
+					if(SymTop!=0&&Sym[SymTop-1]!='('&&Sym[SymTop-1]!='+')
+					{
+						ResTmp=Calculate(Pop(Num,&NumTop),Pop(Num,&NumTop),Pop(Sym,&SymTop));
+						Push(Num,&NumTop,ResTmp);
+					}
+					Push(Sym,&SymTop,'*');
+					break;
+				case 69:    // 对CE的处理
+					NumTop = 0;
+					SymTop = 0;
+					num = 0;
+					break;
+				case 70:     // 对‘=’号处理
+					if(SymTop!=0)
+					{
+						while(SymTop!=0&&(SymTmp=Pop(Sym,&SymTop))!='(' )
+						{
+							ResTmp=Calculate(Pop(Num,&NumTop),Pop(Num,&NumTop),SymTmp);
+							Push(Num,&NumTop,ResTmp);
+						}
+					}
+					num = Pop(Num,&NumTop);	    		
+					break;
+			}
+		}
+			    display(num);
+		}
+	}
+}
+	/*---------计算-------*/
+int Calculate(int right,int left,int symbol)
+{
+	int result = 0;
+	switch(symbol)
+	{
+		case '+':
+			result = left+right;
+			break;
+		case '*':
+			result = left*right;
+			break;
+	}
+	return result;
+}
+/*----------LED显示--------*/
+void display(int num)
+{
+	int i;
+	int cur;
+	int flag=0;
+	if(num>999999)
+	{	
+		for(i=0;i<=5;i++)
+		{
+			*((U8*) 0x10000006) = SEG1;
+			*((U8*) 0x10000004) = seg7table[14];
+			Delay(DELAYTIME);
+			*((U8*) 0x10000006) = SEG0;
+			*((U8*) 0x10000004) = seg7table[14];
+			Delay(DELAYTIME);
+		}
+	}
+	else
+	{
+		for(i=0;i<=5;i++)
+		{
+			flag=0;
+			if((cur=(num/100000)%10))
+			{
+				flag=1;
+				*((U8*) 0x10000006) = SEG5;
+				*((U8*) 0x10000004) = seg7table[cur];
+				Delay(DELAYTIME);
+			}				
+			if((cur=(num/10000)%10) || flag)
+			{
+				flag=1;
+				*((U8*) 0x10000006) = SEG4;
+				*((U8*) 0x10000004) = seg7table[cur];
+				Delay(DELAYTIME);
+			}
+			if((cur=(num/1000)%10) || flag)
+			{
+				flag=1;
+				*((U8*) 0x10000006) = SEG3;
+				*((U8*) 0x10000004) = seg7table[cur];
+				Delay(DELAYTIME);
+			}
+			if((cur=(num/100)%10) || flag)
+			{
+				flag=1;
+				*((U8*) 0x10000006) = SEG2;
+				*((U8*) 0x10000004) = seg7table[cur];
+				Delay(DELAYTIME);
+			}
+			if((cur=(num/10)%10) || flag)
+			{
+				flag=1;
+				*((U8*) 0x10000006) = SEG1;
+				*((U8*) 0x10000004) = seg7table[cur];
+				Delay(DELAYTIME);
+			}
+			*((U8*) 0x10000006) = SEG0;
+			*((U8*) 0x10000004) = seg7table[num%10];
+			Delay(DELAYTIME);
+		}
+	}
+}
+/*------------栈处理-----------*/
+void Push(int * stack,int * top,int val)
+{
+	if(stack==Num)
+		PRINTF("PUSH val %d\n",val);
+	else 
+		PRINTF("PUSH sym %c\n",val);
+	if(*top == STACK_SIZE) 
+		return;
+	stack[(*top)++] = val;
+}
+
+int Pop(int * stack,int * top)
+{
+	if(*top==0)
+		return -1;
+	return stack[--(*top)];
+}

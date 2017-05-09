@@ -1,0 +1,24 @@
+--顶层实体元件设计模块
+LIBRARY  IEEE;
+USE  IEEE.STD_LOGIC_1164.ALL;
+USE  IEEE.STD_LOGIC_UNSIGNED.ALL;  --调用算术运算符的重载函数的声明
+
+ENTITY  ADDER_NB  IS
+	GENERIC(S  :  INTEGER  := 8);   --参数传递说明语句，类属参量S默认为8，可直接修改
+--	GENERIC(S  :  INTEGER  := 16);
+--	GENERIC(S  :  INTEGER  := N);   --N为任意正整数
+	PORT(A,B  :  IN  STD_LOGIC_VECTOR(S-1 DOWNTO 0);
+	     CIN  :  IN  STD_LOGIC;
+		  DOUT :  OUT STD_LOGIC_VECTOR(S-1 DOWNTO 0);
+		  COUT :  OUT STD_LOGIC);
+END  ENTITY  ADDER_NB;
+
+ARCHITECTURE  ONE  OF  ADDER_NB  IS
+SIGNAL  DATA  :  STD_LOGIC_VECTOR(S DOWNTO 0);   --定义信号变量DATA
+SIGNAL  BW    :  STD_LOGIC_VECTOR(S-1 DOWNTO 0);     --定义变量BW，用来数据运算补位
+	BEGIN
+	BW <= (OTHERS => '0');
+	DATA <= ('0' & A) + ('0' & B) + (BW & CIN );
+	DOUT <= DATA(S-1 DOWNTO 0);
+	COUT <= DATA(S);
+END  ARCHITECTURE  ONE;

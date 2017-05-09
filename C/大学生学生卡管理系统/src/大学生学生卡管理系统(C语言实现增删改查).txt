@@ -1,0 +1,519 @@
+/*                         >>>>>>==XXXX大学学生卡信息管理系统==<<<<<<
+                       1.程序功能说明    实现对学生卡信息的串操作
+							  <-1.1-> 添加管理
+							  <-1.2-> 查看管理
+							  <-1.3-> 查找管理
+							  <-1.4-> 修改管理
+							  <-1.5-> 删除管理
+							  <-1.6-> 持续管理
+					   2.程序结构说明     实现界面的任意跳转
+					          <-2.1-> 从main函数出发,遇到1中功能函数后界面跳转,功能函数中可实现是否持续进行当前功能函数
+							  <-2.2-> next函数的返回值将改变静态函数选择变量的值,继而主函数中继续调用当前功能函数
+							  <-2.3-> 使用for循环对输入进行限定,提高容错功能,尤其要消除回车键的影响
+							  <-2.4-> switch结构+执行函数编号+返回函数编号较好实现持续功能
+							  <-2.5-> 字符串复制函数strcpy(s1,s2),字符串比较函数strcmp(s1,s2)使用便利,也能展现其内部机理
+							  <-2.6-> 学生卡信息管理信息系统实现动态模式,数据可根据用户需求动态改变
+					   3.程序改进说明     系统编码输入比对
+					          <-3.1-> 在初始时将系统编码用一个字符数组char CODE[4]进行存储,之后对输入编码进行数组比较
+							  <-3.2-> 对于输入的编码仍采取最简输入方式,不足位自动补0
+					   4.程序设计突破说明    
+					          <-4.1-> 采用多重函数带一个返回值调用方式实现界面循环跳转
+							  <-4.2-> 持续进行某一操作的函数调用方式,可作为一个典型方法
+							  <-4.3-> 彻底解决错误输入引起程序崩溃的问题,病源在于scanf(),getchar()取输入流的方式上
+							  <-4.4-> 运用全局变量,全局常量有利于解决诸多问题,多数被赋值的变量不宜作为全局变量
+*/						
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <windows.h>
+#define  M      1000                                   //常量_主函数内被调用函数执行最大次数
+#define  Q      30                                     //常量_最大学生卡编号数(信息容量值)
+#define  W      20                                     //常量_单项信息存储字符容量
+#define  Time   1000                                   //常量_停顿单位时间: 1s
+static k=0;                                            //变量_学生卡系统编号
+static t=0;                                            //变量_用于函数选择
+char str1[Q][5][W]={'0'};                              //数组_对P个学生卡:姓名,学号,院系,专业,账号,编号 进行存储,初始化
+int  code[Q];                                          //数组_学生卡系统编号存储                                         
+int  next(char str2[Q][5][W],int a);                   //函数_操作是否继续
+void input_Effective(char str2[Q][5][W]);              //函数_功能输入过滤
+void input_Welcome(char str1[Q][5][W]);                //函数_主界面
+void input_ADD(char str2[Q][5][W]);                    //函数_添加学生卡信息
+void input_LOOK(char str1[Q][5][W]);                   //函数_查看学生卡管理系统存储信息
+void input_SEEK(char str2[Q][5][W]);                   //函数_查找单条学生卡信息
+void input_FIND(char str2[Q][5][W],char s[W],int a);   //函数_查找方式(辅助查找)
+void input_MODIFY(char str2[Q][5][W]);                 //函数_修改学生卡信息
+void input_DELETE(char str2[Q][5][W]);                 //函数_删除学生卡信息
+
+//主函数
+int main()
+{
+	int i;
+	for(i=0;i<M;i++)
+	{
+		switch(t)
+		{
+		case 0:
+			input_Welcome(str1);                              //显示主界面信息
+			break;
+		case 1:
+			input_ADD(str1);                                  //添加学生卡信息
+			break;
+		case 2:
+			input_LOOK(str1);                                 //查看学生卡信息
+			break;
+		case 3:
+			input_MODIFY(str1);                               //修改学生卡信息
+			break;
+		case 4:
+			input_DELETE(str1);                               //删除学生卡信息
+			break;
+		default:
+			break;
+		}
+	}
+	system("pause");
+	system("cls");
+	main();
+	return 0;
+}
+
+//主界面函数
+void input_Welcome(char str1[Q][5][W])
+{
+	Sleep(2*Time);
+	printf("\t  **************欢迎来到XXXX大学学生卡管理系统**************\n");
+	printf("\t\t******<<-A->> 添加学生卡基本信息(Add)\n");
+	printf("\t\t******<<-L->> 查看学生卡管理系统存储信息(Look)\n");
+	printf("\t\t******<<-S->> 查找学生卡基本信息(Seek)\n");
+	printf("\t\t******<<-M->> 修改学生卡基本信息(Modify)\n");
+	printf("\t\t******<<-D->> 删除学生卡基本信息(Delete)\n");
+	input_Effective(str1);
+}
+
+//功能输入过滤函数
+void input_Effective(char str2[Q][5][W])
+{
+	int i;
+	char w;
+	printf("请输入需要的功能编号(例如A):  ");
+	for(i=0;i<30;i++)
+	{               
+		w=getchar();                   //可以考虑用switch(w)分支结构,更方便
+		if(w=='A' || w=='a')
+		{
+			input_ADD(str2);
+			break;
+		}
+		if(w=='L' || w=='l')
+		{
+			input_LOOK(str2);
+			break;
+		}
+		if(w=='S' || w=='s')
+		{
+			input_SEEK(str2);
+			break;
+		}
+		if(w=='M' || w=='m')
+		{
+			input_MODIFY(str2);
+			break;
+		}
+		if(w=='D' || w=='d')
+		{
+			input_DELETE(str2);
+			break;
+		}
+
+		if(w=='\n')
+		{
+			continue;                    //消除Enter键影响
+		}
+
+		else                             //输入错误的较好处理方法 
+		{
+			printf("输入有误!请核对后再输入!\n");
+			i--;
+			printf("请输入需要的功能编号:  ");
+		}
+	}
+}
+
+
+//添加学生信息界面
+void input_ADD(char str2[Q][5][W])
+{
+	//Sleep(2*Time);
+	printf("===请输入姓名(四字以内):\t\t");
+	scanf("%s",str2[k][0]);
+	printf("===请输入学号(18位数字以内):\t");
+	scanf("%s",str2[k][1]);
+	printf("===请输入所在学院(八字以内-简称):\t");
+	scanf("%s",str2[k][2]);
+	printf("===请输入所学专业(六字以内-简称):\t");
+	scanf("%s",str2[k][3]);
+	printf("===请输入学生卡账号(6位数字):\t\t");
+	scanf("%s",str2[k][4]);
+	code[k]=k;
+	k++;                  //k是学生卡信息在管理系统里的编号
+	printf(">>>>>添加已完成,继续进行添加学生卡信息操作？YES请按'Y'键  NO请按'N'键\n");
+	t=1;                  //表示执行到input_ADD函数
+	t=next(str2,t);
+}
+
+//查看学生卡管理系统存储信息函数
+void input_LOOK(char str1[Q][5][W])
+{
+	int i;
+	if(k==0)
+	{
+		printf("********当前学生卡管理系统无任何记录!\n");
+		printf("********自动进入添加学生卡信息功能\n");
+		input_ADD(str1);
+	}
+	else
+	{
+		printf("\t===========当前管理系统存储信息如下==========\n");
+		printf("\t>>>>>>>>>>>一共有 %d 个学生卡信息记录:\n",k);
+		printf("\n==姓名==   **学号**\t         ||学院||       %%%%专业%%%%      $$账号$$ ^^编号^^\n");
+		//Sleep(3*Time);
+
+		for(i=0;i<k;i++)
+		{
+			printf("  %-8s  %-18s%-20s",str1[i][0],str1[i][1],str1[i][2]);
+			printf("%-12s\t%-6s  HD%04d\n",str1[i][3],str1[i][4],code[i]);
+		}
+	}
+	//system("pause");
+}
+
+//查找生生卡信息函数
+void input_SEEK(char str2[Q][5][W])
+{
+	int   i,number;
+	char  w1,s[W];
+	printf("\t******请选择查找方式(输入形式:1或2):\n");
+	printf("========\t【-1-按学号】【-2-按账号】========\t\n");
+	printf("========\t【-3-按姓名】【-4-按学院】【-5-按专业】========\t\n");
+	//对输入功能号进行限定
+	for(i=0;i<10;i++)
+	{
+		scanf("%d",&number);
+		if(number>=1 && number<=5)
+		{
+			break;
+		}
+		if(number=='\n')
+		{
+			continue;                    //消除Enter键影响
+		}
+		else
+		{
+			scanf("%c",&w1);             //过滤无效字符
+			printf("输入错误!!请重新输入选择有效功能:  ");
+			i--;
+		}
+	}
+	switch(number)
+	{
+	case 1:
+		printf("请输入学号:\t");    
+		scanf("%s",s);
+		number=1;
+		input_FIND(str2,s,number);
+		break;
+	case 2:
+		printf("请输入账号:\t");    
+		scanf("%s",s);
+		number=4;
+		input_FIND(str2,s,number);
+		break;
+	case 3:
+		printf("请输入姓名:\t");    
+		scanf("%s",s);
+		number=0;
+		input_FIND(str2,s,number);
+		break;
+	case 4:
+		printf("请输入学院:\t");    
+		scanf("%s",s);
+		number=2;
+		input_FIND(str2,s,number);
+		break;
+	case 5:
+		printf("请输入专业:\t");    
+		scanf("%s",s);
+		number=3;
+		input_FIND(str2,s,number);
+		break;
+	default:
+		break;
+	}
+}
+
+//辅助查找学生卡信息函数
+void input_FIND(char str2[Q][5][W],char s[W],int a)
+{
+	int  i,j,save[Q]={0},save1[Q]={0},t=0,n=0;
+	int  flag;
+	char *p;
+	//查找目标学生卡信息
+	for(i=0;i<k;i++)
+	{
+		flag=0;                                        //flag每次判断前都要归0位,查找到其值才置为1
+		p=s;
+		for(j=0;j<W;j++)
+		{
+			if(*p==str2[i][a][j])
+			{
+				p++;
+				if(*p=='\0' && str2[i][a][j+1]=='\0')  //判断字符数组相等,对每个元素进行判断,请注意数组结尾'\0'
+				{
+					flag=1;
+					break;
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		if(flag==1)
+		{
+			t=i;
+			save[n]=t;
+			save1[n]=t;
+			n++;
+		}
+	}
+
+	/*  使用字符串比较函数strcmp(s1,s2),相等返回0,大于返回正整数,小于返回负整数
+	    查找目标学生卡信息
+        for(i=0;i<k;i++)
+        {
+			if(strcmp(s,str2[i][a])==0)
+			{
+				t=i;
+				save[n]=t;
+				save1[n]=t;
+				n++;
+			}
+        }
+	*/
+
+	//输出查找结果的学生卡信息
+	system("cls");
+	printf("\t\t   >>>>>>>查找结果如下<<<<<<<<\t\n");
+	printf("\t\t====按你选择的查找方式,一共 %d 个记录\n",n);  
+	for(i=0;i<n;i++)
+	{		
+			printf("\t\t=========XX  XX  大  学  学  生  卡=========\n");
+			printf("---------------------------------------------------------------\n");
+			printf("      院系:%s\n",str2[save[i]][2]);
+			printf("      专业:%s\n",str2[save[i]][3]);
+			printf("      学号:%s\n",str2[save[i]][1]);
+			printf("     \t\t\t----------------------------------------------\n");
+			printf("  二 vv*v000v*vv\t\t注意事项:\n");
+			printf("  维  v*v000v*v \t\t1.本卡具有身份认证,持卡消费等功能。\n");
+			printf("  码   v?000?v  \t\t2.使用本卡必须遵守有关规定。\n");
+			printf("  扫    v000v   \t\t3.为方便使用,请及时充值。\n");
+			printf("  描     v?v    \t\t4.请妥善保管,遗失后立即挂失。\n");
+			printf("  处      v     \t\t5.拾到本卡后请交到校园卡管理中心。\n");
+			printf("      姓名:%-10s\t----------------------------------------------\n",str2[save[i]][0]);
+			printf("      账号:%s\n",str2[save[i]][4]);
+			printf("      编号:%04d\t\t\t>>XXXX  校园卡管理中心制卡\n",code[save1[i]]);
+			printf("  咨询电话:(027)88663040     http://ecard.hubu.edu.cn    制卡日期:2012.8\n");
+			printf("\n");
+	}
+	system("pause");
+}
+
+//修改学生卡信息函数
+void input_MODIFY(char str2[Q][5][W])       //修改学生卡信息
+{
+	int i,cm,h;
+	char w1;
+	printf("\t\t-----请谨慎修改学生卡信息!!\n");
+	input_LOOK(str2);
+	printf("\n请输入要修改的学生卡的编号最简数值(编号HD0005输入5即可):  ");
+	for(i=0;i<10;i++)
+	{
+		scanf("%d",&cm);
+		if(cm>=0 && cm<=k-1)
+		{
+			break;
+		}
+		if(cm=='\n')
+		{
+			continue;                    //消除Enter键影响
+		}		
+		else
+		{
+			scanf("%c",&w1);             //过滤无效字符,使得scanf函数能正常取输入流
+			printf("输入错误!!请重新输入有效学生卡系统编号:  ");
+			i--;
+		}
+	}
+	printf("\t\t-----即将被修改的学生卡原信息如下:\n");
+	printf("\n==姓名==   **学号**\t         ||学院||       %%%%专业%%%%      $$账号$$ ^^编号^^\n");
+	printf("  %-8s  %-18s%-18s",str1[cm][0],str1[cm][1],str1[cm][2]);
+	printf("%-14s\t%-6s  HD%04d\n",str1[cm][3],str1[cm][4],code[cm]);
+	printf("\t\t\t******修改学生卡信息界面(输入形式:1或2):\n");
+	printf("******<<M-1>>修改姓名  <<M-2>>修改学号\n");
+	printf("******<<M-3>>修改学院  <<M-4>>修改专业  <<M-5>>修改账号\n");
+	//对输入功能号进行限定
+	for(i=0;i<10;i++)
+	{
+		scanf("%d",&h);
+		if(h>=1 && h<=5)
+		{
+			break;
+		}
+	    if(h=='\n')
+		{
+			continue;                    //消除Enter键影响
+		}
+		else
+		{
+			scanf("%c",&w1);
+			printf("输入错误!!请重新输入选择有效功能:  ");
+			i--;
+		}
+	}
+	switch(h)
+	{
+	case 1:
+		printf("请输入修改后的姓名:\t");    
+		scanf("%s",str2[cm][0]);
+		break;
+	case 2:
+		printf("请输入修改后学号:\t");    
+		scanf("%s",str2[cm][1]);
+		break;
+	case 3:
+		printf("请输入修改后的学院:\t");    
+		scanf("%s",str2[cm][2]);
+		break;
+	case 4:
+		printf("请输入修改后的专业:\t");    
+		scanf("%s",str2[cm][3]);
+		break;
+	case 5:
+		printf("请输入修改后的账号:\t");    
+		scanf("%s",str2[cm][4]);
+		break;
+	default:
+		break;
+	}
+	printf(">>>>>修改已完成,继续进行修改学生卡信息操作？YES请按'Y'键  NO请按'N'键\n");
+    t=3;
+	t=next(str2,t);
+}
+
+void input_DELETE(char str2[Q][5][W])
+{
+	int cd,i,j;
+	char w1;
+	if(k==0)
+	{
+		printf("********当前学生卡管理系统无任何记录!\n");
+		printf("********请先执行添加学生卡信息功能(按'A'键)\n");
+	}
+	else
+	{
+		input_LOOK(str2);
+		printf("\t\t-----请谨慎删除学生卡信息!\n");
+		printf(">>>>>请输入要删除的学生卡的系统编号最简数值(编号HD0005输入5即可):  ");
+		for(i=0;i<10;i++)
+		{
+			scanf("%d",&cd);
+			if(cd>=0 && cd<=k-1)
+			{
+				break;		
+			}
+			if(cd=='\n')
+			{
+				continue;
+			} 
+			else
+			{
+				scanf("%c",&w1);
+				printf("输入错误!!请重新输入选择有效功能:  ");
+				i--;		
+			}
+		}
+        
+		if(cd==(k-1))
+		{
+			code[k-1]=0;
+			k=k-1;
+		}
+		else
+		{
+			for(i=cd;i<k;i++)
+			{
+				for(j=0;j<5;j++)
+				{
+					strcpy(str2[i][j],str2[i+1][j]);        //实现目标删除并有序排列str1[Q][5][W]
+				}
+			}
+			code[k-1]=0;
+			k=k-1;
+		}
+		input_LOOK(str2);
+		printf(">>>>>删除已完成,继续进行删除学生卡信息操作？YES请按'Y'键  NO请按'N'键\n");
+		t=4;
+		t=next(str2,t);
+	}
+}
+
+//是否进行相同操作判断函数
+int next(char str2[Q][5][W],int a)
+{
+	int i;
+	char w;
+	for(i=0;i<10;i++)
+	{
+		scanf("%c",&w);
+		if(w=='Y' || w=='y')
+		{
+			switch(a)
+			{
+			case 1:
+				return 1;
+				break;
+			case 2:
+				return 2;
+				break;
+			case 3:
+				return 3;
+				break;
+			case 4:
+				return 4;
+				break;
+			default:
+				return 0;
+				break;
+			}		
+			break;
+		}
+		if(w=='N' || w=='n')
+		{
+			return 0;
+			break;
+		}
+	
+		if(w=='\n')
+		{
+			continue;                    //消除Enter键影响
+		}
+
+		else                             //输入错误的较好处理方法 
+		{
+			printf("输入有误!请核对后再输入!\nY  OR  N:  ");
+			//i--;
+		}
+	}    
+}

@@ -1,0 +1,121 @@
+16to2：
+ #include <stdio.h>
+#include <stdlib.h>
+#define B_Bit  80  //按照H_Bit=4*HtoB_Bit 进行约束,节省空间
+#define H_Bit  20  //说明:此程序对于输入具有容错功能,可以滤掉错误字符,在容错情况较多情况,建议增大H_Bit的值
+//#define H_Bit 16 OR 32 OR ∞  (任意整数)
+int main()
+{
+	int i,j,k1,k2,n,m,x,HtoB_number[B_Bit]={0},H1_number[H_Bit]={0};
+	char w,H2_number[H_Bit]={'0'};
+	printf("****Weclom to enter **16->2** Numerical-System-Change Worder!****\n");
+	printf("******Please input a H_Number(十六进制数):\n");
+    
+	k1=0;
+	for(i=0;i<H_Bit;i++)
+	{
+		w=getchar();
+		if(w=='\n')      //先行判断是否为输入结束!!!
+		{
+			break;
+		}
+		if((w>='0' && w<='9')||(w>='A' && w<='F')||(w>='a' && w<='f'))
+		{
+			H2_number[k1]=w;
+			k1++;        //k1为输入有效的十六进制数的位数
+		}
+			
+	}
+
+	//显示输入的有效十六进制数
+	printf("Input H_number is:  ");
+	for(i=0;i<k1;i++)
+	{
+		printf("%c",H2_number[i]);
+	}
+	printf(" H(十六进制数)\n");
+
+	//将有效十六进制数字符位转换为十进制数位
+	for(i=0;i<k1;i++)
+	{
+		if(H2_number[i]<='9' && H2_number[i]>='0')
+		{
+			H1_number[i]=H2_number[i]-48;
+		}
+		if(H2_number[i]<='F' && H2_number[i]>='A')
+		{
+			H1_number[i]=H2_number[i]-55;
+		}
+		if(H2_number[i]<='f' && H2_number[i]>='a')
+		{
+			H1_number[i]=H2_number[i]-87;
+		}
+	}
+
+	//进制位转换结果检查
+	for(i=0;i<k1;i++)
+	{
+		printf("H2=%4d\tH1=%4d\n",H2_number[i],H1_number[i]);
+	}
+	
+    //输出界面
+	j=0;
+	k2=0;
+	for(i=0;i<k1;i++)
+	{
+		x=H1_number[i];
+		for(;j<4*(i+1);j++)
+		{	
+			n=x/2;
+			m=x%2;
+			x=n;
+			HtoB_number[j]=m;     //保存余数,即(反序)保存二进制位
+			if(x!=0)           //商不为0,继续作商取余
+			{		
+				k2++;          
+			}
+			else               //商为0,进制位转换结束,接下来判断是否要补0位
+			{
+				k2++;
+				while(k2!=4*(i+1))     //当转换的二进制位不为4时
+				{
+					k2++;
+					j++;
+					HtoB_number[j]=0;     //该二进制位高位补0
+				}
+				j++;
+				break;
+			}      
+		}		
+	}
+
+    printf("输入16进制位位数:k1=%4d\n输出 2进制位位数:k2=%4d\n",k1,k2);
+    printf("进制转换后二进制初始态为:\n");
+
+	//输出正确的二进制数结果
+	for(i=0;i<k2;i++)
+	{
+		printf("%2d",HtoB_number[i]);
+	}
+	printf("\n\n");
+
+	j=0;
+	printf("Output HtoB_number is:  ");
+	for(i=0;i<k1;i++)
+	{
+		x=k2-(k1-1-i)*4;
+		for(j=x-1;j>x-5;j--)
+		{
+			printf("%d",HtoB_number[j]);
+			if(j%4==0)
+			{
+				printf(" ");
+			}
+		}
+	}
+	printf("B(二进制数)\n");
+	system("pause");
+	system("cls");
+	main();
+	return 0;
+}

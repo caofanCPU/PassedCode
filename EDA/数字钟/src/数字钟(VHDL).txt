@@ -1,0 +1,402 @@
+-- 进程P1
+-- 实现功能为分频。分别为计数频率和调时频率:
+-- CLK为输入50MHzHz频率，CLK1Hz、CLK10Hz、CLK200Hz、CLK1KHz为分频后输出频率
+-- 输入时钟CLK，输出分频时钟CLK1Hz、CLK10Hz、CLK200Hz、CLK1KHz
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+ENTITY P1 IS
+	PORT( CLK      :  IN  STD_LOGIC;
+		  CLK1Hz   :  OUT STD_LOGIC;
+		  CLK10Hz  :  OUT STD_LOGIC;
+		  CLK200Hz :  OUT STD_LOGIC;
+		  CLK1KHz  :  OUT STD_LOGIC
+       );
+END P1;
+---------------------------------------------------
+ARCHITECTURE BEHAVE OF P1 IS
+BEGIN
+--仿真使用代码，唯一进程
+--PROCESS(CLK)       --产生1Hz信号，计时脉冲 
+--	VARIABLE CNT : INTEGER RANGE 0 TO 19; 
+--BEGIN 
+--	IF CLK='1' AND CLK'EVENT THEN 
+--		IF CNT=19 THEN 
+--		   CNT:=0; 
+--      ELSE 
+--			IF CNT<10 THEN 
+--				CLK1Hz<='1'; 
+--         ELSE CLK1Hz<='0'; 
+--         END IF; 
+--      CNT:=CNT+1; 
+--      END IF; 
+--	END IF; 
+--END  PROCESS;
+--CLK10Hz<=CLK;
+--CLK200Hz<=CLK;
+--CLK1KHz<=CLK;
+
+PROCESS(CLK)       --产生1Hz信号，计时脉冲 
+	VARIABLE CNT : INTEGER RANGE 0 TO 49999999; 
+BEGIN 
+	IF CLK='1' AND CLK'EVENT THEN 
+		IF CNT=49999999 THEN 
+		   CNT:=0; 
+      ELSE 
+			IF CNT<25000000 THEN 
+				CLK1Hz<='1'; 
+         ELSE CLK1Hz<='0'; 
+         END IF; 
+      CNT:=CNT+1; 
+      END IF; 
+	END IF; 
+END  PROCESS;
+
+PROCESS(CLK)       --产生10Hz信号，LED报时脉冲 
+	VARIABLE CNT : INTEGER RANGE 0 TO 4999999; 
+BEGIN 
+	IF CLK='1' AND CLK'EVENT THEN 
+		IF CNT=4999999 THEN 
+		   CNT:=0; 
+      ELSE 
+			IF CNT<2500000 THEN 
+				CLK10Hz<='1'; 
+         ELSE CLK10Hz<='0'; 
+         END IF; 
+      CNT:=CNT+1; 
+      END IF; 
+	END IF; 
+END  PROCESS;
+
+PROCESS(CLK)       --产生200Hz信号，蜂鸣器报时脉冲 
+	VARIABLE CNT : INTEGER RANGE 0 TO 249999; 
+BEGIN 
+	IF CLK='1' AND CLK'EVENT THEN 
+		IF CNT=249999 THEN 
+		   CNT:=0; 
+      ELSE 
+			IF CNT<125000 THEN 
+				CLK200Hz<='1'; 
+         ELSE CLK200Hz<='0'; 
+         END IF; 
+      CNT:=CNT+1; 
+      END IF; 
+	END IF; 
+END  PROCESS;
+
+PROCESS(CLK)       --产生1KHz信号，扫描脉冲 
+	VARIABLE CNT : INTEGER RANGE 0 TO 49999; 
+BEGIN 
+	IF CLK='1' AND CLK'EVENT THEN 
+		IF CNT=49999 THEN 
+			CNT:=0; 
+      ELSE 
+			IF CNT<25000 THEN 
+				CLK1KHz<='1'; 
+         ELSE CLK1KHz<='0'; 
+         END IF; 
+      CNT:=CNT+1; 
+      END IF; 
+	END IF; 
+END  PROCESS;
+END BEHAVE;
+
+--  进程P2
+--  实现功能为复位、调时
+--  输入分频时钟CLK1Hz，复位键RST=0时，复位，调时脉冲S1，调分脉冲S2。
+--  HOUR10~SEC1为计数当前状态输入
+--  HOUR_10~SEC_1为调时输出状态；作为计数模块的输入；
+--  K2为状态控制位，当K2=1时，说明调时模块工作，此时计数模块停止计时，K2=0时，调时模块不工作，此时计数模块照常工作。
+--  K1为计时模制控制位，当K1=1时，一天为12小时，K1=0时，一天为24小时。
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+ENTITY P2 IS
+	PORT(  CLK1Hz                                :  IN     STD_LOGIC;
+          S1_H,S2_M,S3_RST,S4_T1,S5_YI           :  IN     STD_LOGIC;
+          TC2                                    :  BUFFER STD_LOGIC;
+		  S4_T1O                                 :  OUT    STD_LOGIC;
+		  S5_YO                                  :  OUT    STD_LOGIC;
+          HOUR10,HOUR1,MIN10,MIN1,SEC10,SEC1     :  IN     INTEGER RANGE 0 TO 9;
+          HOUR_10,HOUR_1,MIN_10,MIN_1,SEC_10,SEC_1:  BUFFER INTEGER RANGE 0 TO 9
+          );
+END P2;
+---------------------------------------------
+ARCHITECTURE BEHAVE OF P2 IS
+SIGNAL  THOUR_10,THOUR_1     :  INTEGER  RANGE 0 TO 9;
+BEGIN
+	PROCESS(CLK1Hz,S3_RST,S1_H,S2_M,S4_T1)
+   BEGIN
+   IF(S3_RST='0' OR S1_H='0' OR S2_M='0' ) THEN   -- 当调时模块中RST，S1，S2有一位有效，则计数模块停止，调时模块的输出作为计数模块的输入。
+		TC2<='1';      --K2为高电平，计数模块停止工作
+   ELSIF(S4_T1='1' AND HOUR_10*10+HOUR_1>11) THEN
+		TC2<='1';
+ELSE
+		TC2<='0';      --K2为低电平，计数模块正常工作
+   END IF;
+
+	IF(CLK1Hz'EVENT AND CLK1Hz='1') THEN
+		IF(S3_RST='0') THEN  
+		 SEC_1<=0;
+         SEC_10<=0;
+         MIN_1<=0;
+         MIN_10<=0;
+         HOUR_1<=0;
+         HOUR_10<=0;
+      ELSIF(S1_H='0') THEN   --  调节小时。
+         IF(HOUR_1=9) THEN
+				HOUR_1<=0;
+            HOUR_10<=HOUR_10+1;
+         ELSIF(S4_T1='0' AND HOUR_10=2 AND HOUR_1=3) THEN
+            HOUR_1<=0;
+            HOUR_10<=0;
+         ELSIF(S4_T1='1'AND HOUR_10=1 AND HOUR_1=1) THEN
+            HOUR_1<=0;
+            HOUR_10<=0;
+			ELSIF(S4_T1='1' AND HOUR_10*10+HOUR_1>11) THEN
+				IF(HOUR_10*10+HOUR_1=23) THEN
+					HOUR_10<=0;
+					HOUR_1<=0;
+				END IF;
+         ELSE 
+            HOUR_1<=HOUR_1+1;
+         END IF;			
+      ELSIF(S2_M='0') THEN  --调节分钟  
+			IF(MIN_1=9) THEN
+				MIN_1<=0;
+				IF(MIN_10=5) THEN
+					MIN_10<=0;
+				ELSE 
+					MIN_10<=MIN_10+1;
+				END IF;
+         ELSE
+				MIN_1<=MIN_1+1;
+         END IF;
+      ELSE
+			HOUR_10<=HOUR10;
+         HOUR_1<=HOUR1;
+         MIN_10<=MIN10;
+         MIN_1<=MIN1;
+         SEC_10<=SEC10;
+         SEC_1<=SEC1;
+      END IF;
+	END IF;
+   END PROCESS;
+	S4_T1O<=S4_T1;
+   S5_YO<=S5_YI;	
+END BEHAVE;
+
+--  进程P3
+--  实现功能为计时 
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_ARITH.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+ENTITY P3 IS
+	PORT(CLK1Hz          :  IN  STD_LOGIC;  --时钟输入信号
+		  TC2             :  IN  STD_LOGIC;  --状态标志，当RST、S1、S2都1时为0：调时进行、计时停止；否则为1：调时结束、计时继续        
+        S4_T            :  IN  STD_LOGIC;  --时模可变输入信号，低电平为24小时制高电平为12小时制
+		  S5_Y            :  IN  STD_LOGIC;  --报时检验预置数开关S5，低电平有效
+        HOUR_10,HOUR_1  :  IN  INTEGER RANGE 0 TO 9; 
+        MIN_10,MIN_1    :  IN  INTEGER RANGE 0 TO 9;
+        SEC_10,SEC_1    :  IN  INTEGER RANGE 0 TO 9 ;    
+        HOUR10,HOUR1    :  BUFFER  INTEGER RANGE 0 TO 9; 
+        MIN10,MIN1      :  BUFFER  INTEGER RANGE 0 TO 9;
+        SEC10,SEC1      :  BUFFER  INTEGER RANGE 0 TO 9  
+       );      
+END P3;
+------------------------------------------------------
+ARCHITECTURE BEHAVE OF P3 IS
+BEGIN
+	PROCESS(CLK1Hz)
+   BEGIN
+		IF(S5_Y='0') THEN
+			SEC1<=5;
+			SEC10<=4;
+			MIN1<=9;
+			MIN10<=5;
+		ELSIF(TC2='1')THEN      --如果模式控制状态位TC2为高电平，正常计数输出
+			IF(S4_T='1' AND HOUR_10*10+HOUR_1>11) THEN
+				SEC1<=SEC_1;
+				SEC10<=SEC_10;
+				MIN1<=MIN_1;
+				MIN10<=MIN_10;
+				HOUR10<=(HOUR_10*10+HOUR_1-12)/10;
+				HOUR1<=((HOUR_10*10+HOUR_1-12) MOD 10);   
+--24小时计时模式向12小时计时模式转换
+			ELSE
+				SEC1<=SEC_1;
+				SEC10<=SEC_10;
+				MIN1<=MIN_1;
+				MIN10<=MIN_10;
+				HOUR1<=HOUR_1;
+				HOUR10<=HOUR_10;
+			END IF;
+		ELSE                                 
+			IF(CLK1Hz'EVENT AND CLK1Hz='1') THEN
+				IF(SEC1=9) THEN
+					SEC1<=0;
+               IF(SEC10=5) THEN
+						SEC10<=0;
+							IF(MIN1=9) THEN
+								MIN1<=0;
+								IF(MIN10=5) THEN      -- 分为60进制
+									MIN10<=0;
+										IF(HOUR1=9) THEN
+										HOUR1<=0;
+										HOUR10<=HOUR10+1;
+										ELSIF(S4_T='0' AND HOUR10=2 AND HOUR1=3) THEN  -- 当K1=0时，一天24小时
+											HOUR1<=0;
+											HOUR10<=0;
+										ELSIF(S4_T='1' AND HOUR10=1 AND HOUR1=1)THEN   --当K1=1时，一天12小时
+											HOUR1<=0;
+											HOUR10<=0;
+										ELSE 
+											HOUR1<=HOUR1+1;
+										END IF;
+								ELSE 
+									MIN10<=MIN10+1;
+								END IF;
+						ELSE
+							MIN1<=MIN1+1;
+						END IF;
+					ELSE
+						SEC10<=SEC10+1;
+					END IF;
+				ELSE 
+					SEC1<=SEC1+1;
+				END IF;
+         END IF;
+      END IF;
+		END IF;
+	END PROCESS;
+END BEHAVE;
+
+--  进程P4
+--  实现功能为整点报时
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+ENTITY P4 IS
+	PORT(CLK10Hz      :  IN  STD_LOGIC;             -- 输入时钟信号
+		  CLK200Hz    :  IN  STD_LOGIC;
+          LED  :  OUT STD_LOGIC_VECTOR(7 DOWNTO 0);  -- LED灯控制信号，作报时用
+		  FMQ         :  OUT STD_LOGIC;             -- 蜂鸣器响，作报时用
+          MIN10,MIN1,SEC10,SEC1  :  IN  INTEGER RANGE 0 TO 9    -- 实现整点报时，59分55秒开始
+       );
+END P4;
+-----------------------------------------------------------
+ARCHITECTURE BEHAVE OF P4 IS
+SIGNAL CNT_LED  :  INTEGER  RANGE 0 TO 8;
+BEGIN
+	PROCESS(CLK10Hz)
+		BEGIN
+		IF(CLK10Hz'EVENT AND CLK10Hz='1') THEN
+			IF(MIN10=5 AND MIN1=9 AND SEC10=5 AND (SEC1>=0 AND SEC1<=9)) THEN    --  在59分50秒开始提示				
+				IF CNT_LED=7 THEN 
+					CNT_LED<=0;	
+				ELSE
+					CNT_LED<=CNT_LED+1;
+				END IF;
+				CASE CNT_LED IS
+					WHEN 0 => LED<="01111111"; 
+					WHEN 7 => LED<="10111111";
+					WHEN 6 => LED<="11011111";
+					WHEN 5 => LED<="11101111";
+					WHEN 4 => LED<="11110111";
+					WHEN 3 => LED<="11111011";
+					WHEN 2 => LED<="11111101";
+					WHEN 1 => LED<="11111110";
+					WHEN OTHERS =>LED<="11111111";
+				END CASE;
+			ELSE
+				LED<="11111111";
+			END IF;
+      END IF;
+
+--		IF(MIN10=5 AND MIN1=9 AND SEC10=5 AND (SEC1>=0 AND SEC1<=9)) THEN
+--			LED<=(OTHERS=>NOT(CLK10HZ));
+--		ELSE
+--			LED<="11111111";
+--		END IF;
+	END PROCESS;
+	
+	PROCESS(SEC1)
+	BEGIN
+		IF (MIN10=5 AND MIN1=9 AND SEC10=5 AND (SEC1>=0 AND SEC1<=9)) THEN 
+			FMQ<=CLK200Hz;
+		ELSE
+			FMQ<='0';
+		END IF;
+	END PROCESS;
+END BEHAVE;
+
+--  进程P5
+--  实现功能为数码管动态扫描显示
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+ENTITY P5 IS
+	PORT(CLK_SM      :  IN  STD_LOGIC;   -- 输入时钟脉冲
+        SEG_SEL      :  OUT STD_LOGIC_VECTOR(7 DOWNTO 0);  -- 数码管位选信号
+        HOUR10,HOUR1,MIN10,MIN1,SEC10,SEC1  :  IN  INTEGER RANGE 0 TO 9; 
+        DISPLAY      :  OUT STD_LOGIC_VECTOR(6 DOWNTO 0)   -- 七段显示码
+        );
+END P5;
+----------------------------------------------------------
+ARCHITECTURE BEHAVE OF P5 IS
+   SIGNAL DISP_TEMP     : INTEGER RANGE 0 TO 15;
+	SIGNAL SEG_SEL_TEMP  : STD_LOGIC_VECTOR(7 DOWNTO 0);
+   SIGNAL DISP_DECODE   : STD_LOGIC_VECTOR(6 DOWNTO 0);
+   BEGIN
+	
+   PROCESS(CLK_SM)
+		VARIABLE  COUNT:  INTEGER  RANGE 0 TO 7;
+      BEGIN
+			IF(CLK_SM'EVENT AND CLK_SM='1') THEN      --扫描累加 
+				IF COUNT=7 THEN  
+					COUNT:=0;
+			   ELSE  
+			      COUNT:=COUNT+1;
+			   END IF;
+				SEG_SEL_TEMP<="11111111";
+				SEG_SEL_TEMP(COUNT)<='0';
+				SEG_SEL<=SEG_SEL_TEMP;
+				DISPLAY<=DISP_DECODE;		  
+         END IF;
+    END PROCESS;
+	 
+	PROCESS(SEG_SEL_TEMP)      
+   BEGIN
+		CASE (SEG_SEL_TEMP) IS 
+			WHEN "01111111"=>DISP_TEMP<=SEC1;
+			WHEN "10111111"=>DISP_TEMP<=SEC10;
+         WHEN "11011111"=>DISP_TEMP<=MIN1;
+         WHEN "11101111"=>DISP_TEMP<=MIN10;
+         WHEN "11110111"=>DISP_TEMP<=HOUR1;
+         WHEN "11111011"=>DISP_TEMP<=HOUR10;
+         WHEN "11111101"=>DISP_TEMP<=15;
+         WHEN "11111110"=>DISP_TEMP<=12;
+			WHEN OTHERS=>DISP_TEMP<=10;
+      END CASE;        
+	END PROCESS;
+
+	PROCESS(DISP_TEMP)      --数码管显示转换
+		BEGIN
+			CASE DISP_TEMP IS
+				WHEN 0=>DISP_DECODE<="1000000";   --0
+				WHEN 1=>DISP_DECODE<="1111001";   --1
+				WHEN 2=>DISP_DECODE<="0100100";   --2
+				WHEN 3=>DISP_DECODE<="0110000";   --3
+				WHEN 4=>DISP_DECODE<="0011001";   --4
+				WHEN 5=>DISP_DECODE<="0010010";   --5
+				WHEN 6=>DISP_DECODE<="0000010";   --6
+				WHEN 7=>DISP_DECODE<="1111000";   --7
+				WHEN 8=>DISP_DECODE<="0000000";   --8
+				WHEN 9=>DISP_DECODE<="0010000";   --9
+				WHEN 15=>DISP_DECODE<="0001110";  --F
+				WHEN 12=>DISP_DECODE<="1000110";  --C
+				WHEN OTHERS=>DISP_DECODE<="1111111";   --全灭
+			END CASE;
+	END PROCESS;   
+END BEHAVE;

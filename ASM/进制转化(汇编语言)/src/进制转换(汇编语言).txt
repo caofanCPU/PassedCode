@@ -1,0 +1,370 @@
+stack  segment stack 'stack'  ;定义堆栈段,在编译时得到堆栈段段基址(SS,SP由系统指定)
+           dw 32 dup(0)   ;堆栈操作,SS:SP,其中SP指向偶地址(规则字地址)
+stack       ends
+ 
+data   segment  ;定义数据段,在编译时得到数据段段地址(偏移地址),需要程序进行DS赋值
+;数据段内存储欢迎信息
+welcome db10,13,'********************************************************'
+       db 10,13,'Welcome to enter this NumbersEqualChange Program world! '
+       db 10,13,'^0^-^1^o^2^-^3^o^4^-^5^o^6^-^7^o^8^-^9^o^A^-^B^o^C^-^D^ '
+       db 10,13,'************DecimalNumbers:<=65535(FFFFH)**************',10,13,'$'
+;数据段内存储主界面信息
+menu   db 10,13,'********************************************************'   
+       db 10,13,'*            Pleasechoice action:                    *'    
+       db 10,13,'*            1.Binary toHexadecimal        (2->16)    *'   
+        db 10,13,'*            2.Binary to Decimal            (2->10)    *'
+       db 10,13,'*           3.Hexadecimal to Binary       (16->2)    *'    
+       db 10,13,'*           4.Hexadecimal to Decimal      (16->10)   *'
+       db 10,13,'*            5.Decimal to Binary            (10->2)    *'   
+       db 10,13,'*            6.Decimalto Hexadecimal       (10-16)    *'   
+       db 10,13,'*            0.Exit theNumbersEqualChange Program     *'   
+       db 10,13,'********************************************************',10,13,'$'
+        
+;数据段内存储二进制转换为其他进制时输入和输出提示信息
+str2   db 10,13,'please input the binary string:',10,13, '$'  
+str21  db 'the hexadecimal string is:',10,13, '$' 
+str22  db 'the decimal string is:',10,13, '$' 
+;数据段内存储十六进制转换为其他进制时输入和输出提示信息 
+str3   db 10,13,'please input the hexadecimal string:',10,13, '$' 
+str31  db 'the binary string is:',10,13, '$' 
+str32  db 'the decimal string is:',10,13, '$'
+;数据段内存储十进制转换为其他进制时输入和输出提示信息  
+str4   db 10,13,'please input the decimal string:',10,13, '$' 
+str41  db 'the binary string is:',10,13, '$' 
+str42  db 'the hexadecimal string is:',10,13, '$' 
+;数据段内存储功能号输入错误和重新输入提示信息
+emsg   db 10,13,'the function number input error! please inputagain:',10,13,'$'
+data   ends
+   
+code   segment  ;定义代码段,在编译时得到代码段段基址(CS,IP由系统指定),不允许被赋值   
+       assume cs:code,ds:data,ss:stack  
+;ASSUME指令用于指定XX段与段寄存器的关系
+;在编译完成时通过上述指定即可由EU通过BIU里面的地址加法器算出存储单元的物理地址
+ 
+charin macro      ;定义一个DOS1号功能--键盘输入并显示-宏 (输入字符存放在AL中)      
+       mov ah,01h       
+       int 21h      
+endm 
+; 
+;numin  macro   
+;       charin   
+;       sub al,48 
+;endm
+;
+;strin  macro stringin      
+;       lea dx,stringin     
+;       mov ah,0ah       
+;       int 21h      
+;endm 
+  
+charout macro outchar ;定义一个DOS2号功能--显示字符-宏 (要显示字符存放在DL中)     
+        push ax   
+        push dx   
+        mov dl, outchar  ;形式参数outchar为要现实的字符  
+        mov ah, 02h       
+        int 21h        
+        pop dx   
+        pop ax 
+endm 
+ 
+numout macro outnum ;定义一个DOS2号功能--字符变为相应数字显示-宏 
+       push ax   
+       push dx   
+       mov dl, outnum    ;形式参数outnum为要显示的字符   
+       add dl, 48        ;DL中存放要显示字符对应的数字(DL为2号功能调用的入口参数)
+              movah, 02h       
+              int21h        
+              popdx   
+              popax 
+endm 
+  
+strout macro stringout ;定义一个DOS9号功能--显示字符串-宏 (功能调用结束符'$'已具备)       
+              pushax   
+              pushdx   
+              leadx, stringout ;形式参数stringout为要输出的字符串,在DATA段中存储着其信息     
+              movah, 09h      ;9号功能调用入口参数为DS:DX,缓冲区的首地址       
+              int21h          
+              popdx   
+              popax 
+endm
+   
+endl   macro     ;定义一个回车换行输出-宏          
+              pushax   
+             push bx   
+              pushcx   
+              pushdx      
+              movdl,0ah   ;输出换行符       
+              movah,02h   
+              int21h        
+              movdl,0dh   ;输出回车符
+              movah,02h      
+              int21h             
+              popdx   
+              popcx   
+              popbx   
+              popax 
+endm
+    
+outax  macro basenum   ;定义一个取得目的进制并进行进制转换-宏 
+              pushax   
+              pushbx   
+              pushcx   
+              pushdx      
+              movbx, basenum  ;目的进制存放在BX中    
+              calloutaxp      ;调用进制转换并输出结果的过程outaxp  
+              popdx   
+              popcx   
+              popbx   
+              popax 
+endm 
+ 
+outaxp proc    ;定义一个对源进制数操作得到并输出目的进制数的近过程(类似于一个函数)
+              movdx,0   ;DX初始化为0        
+              movcx,0   ;CX初始化为0
+                 
+outaxp_circle:   
+              cmpax,0    ;从后面程序知AX里面存放源进制数       
+              jeoutaxp_next   ;直到AX中的商为0才结束辗转相除法     
+              divbx           ;此步DIV操作为16位辗转相除法(也为除R取余逆序法)
+                               ;AX/BX: AX中始终存放商,AX%BX: DX中始终存放余数       
+              pushdx          ;每个余数都压入堆栈       
+              movdx,0         ;压入堆栈后把DX置0  
+              inccx   ;CX初值为0,每压入一个余数进栈,CX自加1,用来记录余数个数(除法次数)         
+              jmpoutaxp_circle    ;无条件转移指令,迫使JE OUTAXP_NEXT绝对成立
+;因而顺利进行到下面的指令处            
+outaxp_next:        
+              popax    ;从最后一个余数开始逐个向前放入AX中,余数具体保存在AL中(逆序体现)   
+              cmpal,10         
+              jb  nout     ;余数小于10直接输出 
+              addal,55     ;大于等于10则要换为相应进制位数字符        
+              charoutal    ;再输出这个进制位数字字符(A~F)
+              jmpcout      ;无条件转移到COUNT指令处
+;具体操作为:把当前指令的地址偏移地址IP入栈,再把COUNT的偏移地址传给IP
+;跳转结束后堆栈里的IP出栈赋值给堆栈外IP,然后程序从JMP COUNT的下一条指令继续执行
+                 
+nout:  
+              numoutal   ;输出AL中字符对应的数字(0~9)
+              
+cout:   
+;LOOP指令:对应计数寄存器CX,之前CX记录了余数的个数,每循环一次,即输出一个余数后,
+;CX自减一,再判断:CX=0就跳出LOOP循环,也就是执行LOOP指令的下一条指令,
+;CX!=0则继续LOOP循环,即跳到LOOP指令后的标号处
+;由于LOOP指令是先执行一次循环体再判断循环条件,则LOOP循环属于'直到型循环'
+              loop outaxp_next
+              ret    ;余数输出完毕,即结果输出完毕,直接返回
+               
+outaxp endp
+    
+inax macro basenum    ;定义一个取得源进制并调用源进制数字符转换的过程INAXP
+              pushbx   
+              pushcx   
+              pushdx      
+              movcx, basenum   ;源进制保存在CX中   
+              callinaxp          
+              popdx   
+              popcx   
+              popbx 
+endm 
+ 
+inaxp proc ;定义一个从键盘输入源进制数字符并正确转换为源进制数操作的近过程 
+              movax, 0  ;初始化AX
+              
+inaxp0:   
+              
+;此步目的:由于源进制数是一位一位输入和判断是否有效的,因而要把前几位有效输入保存下来
+              pushax    ;AX入栈
+              
+inaxp1: 
+              charin     ;此处是键盘输入字符宏,即键盘输入字符并送给AL
+                     
+              cmpal, 13   
+              jeinaxe     ;AL的值为0DH(回车键),表示数据输入完毕       
+              cmpal, '0'   
+              jbinaxp1    ;AL值低于0,无效字符，则继续等待从键盘输入字符     
+              cmpal, '9'    
+              ja  inaxnext1 ;AL的值高于9,可能为A~F,a~f,其他三种情况(前两种为有效输入)
+              subal, 48     ;输入的字符为有效字符(0~9),将AL中字符转换为对应数字     
+              jmpinaxnum    ;无条件跳转指令,跳到INAXNUM处 
+                      
+inaxnext1:    
+              cmpal, 'A'   
+              jbinaxp1     ;AL中字符高于9且低于A,为无效字符,则继续等待从键盘输入     
+              cmpal, 'F'   
+              jainaxnext2  ;AL中字符高于9且高于F(即高于F),需要进一步判断    
+              subal, 55    ;AL中字符高于9并且在A~F中,有效字符,转换为相应进制位数字         
+              jmpinaxnum   ;无条件跳转指令,跳到INAXNUM处
+ 
+inaxnext2:   
+              cmpal, 'a'   
+              jbinaxp1     ;AL中字符高于9且高于F但低于a,为无效字符,则继续等待从键盘输入            
+              cmpal, 'f'   
+              jainaxp1     ;AL中字符高于9且高于F且高于f,为无效字符,则继续等待从键盘输入       
+              subal, 87    ;AL中字符高于9且高于F在a~f中,为有效字符,转换为相应进制位数字           
+              jmpinaxnum   ;无条件跳转指令,跳到INAXNUM处
+              
+inaxnum:  
+              movbh, 0     ;初始化BH       
+              movbl, al    ;把AL(输入字符的数字)保存在BL中
+              cmpbx,cx     ;把AL(输入字符的数字)和源进制比较
+              jaeinaxp1    ;AL大于或等于源进制,输入无效,自动过滤该字符,继续等待从键盘输入  
+              popax        ;AX存放已输入字符的数字的CX进制(源进制)数   
+              cmpax, 0     ;输入第一个数据时AX为0,相当于乘以权值CX的0次方        
+              jeinaxadd    ;进行输入字符数字的CX进制数正确求和
+              mulcx        ;每输入一位,比它高的进制位都要乘以权值CX
+                    
+inaxadd:  
+              addax, bx    ;进行输入字符数字的CX进制数正确求和,结果保存在AX中
+              jmpinaxp0    ;算出源进制数的正确表示结果,等待下一位输入求和或者回车键结束
+               
+;键盘按下回车键时程序跳到此处执行,将从键盘输入的源进制数字符转换为正确的源进制数
+inaxe:  
+              popax        ;从堆栈中取出源进制数的最终正确结果        
+              ret           ;无条件返回
+              
+inaxp endp 
+ 
+start:
+              movax,data   ;DATA为立即数(编译时系统分配的16位地址)      
+              movds,ax     ;故而通过通用寄存器AX完成DATA段段基址的赋值
+                  
+display:
+              stroutwelcome     ;通过字符串输出宏显示欢迎信息    
+              ;movax,data       
+              ;movds,ax     
+              stroutmenu        ;通过字符串输出宏显示主界面信息
+normal:                
+              charin             ;通过键盘输入字符宏等待键盘输入字符并将字符传给AL
+ 
+;功能号选择:'1'键表示执行<-2->to<-16->
+;          '2'键表示执行<-2->to<-10->
+;          '3'键表示执行<-16->to<-2->
+;          '4'键表示执行<-16->to<-10->
+;           '5'键表示执行<-10->to<-2->
+;          '6'键表示执行<-10->to<-16->
+;          '0'键表示执行退出程序                    
+              cmpal,'1'   
+              jebin_hex     
+              cmpal,'2'   
+              jebin_dec   
+              cmpal,'3'   
+              jehex_bin   
+              cmpal,'4'   
+              jehex_dec   
+              cmpal,'5'   
+              jedec_bin   
+              cmpal,'6'   
+              jedec_hex   
+              cmpal,'0'   
+              jeexit   
+              jmperror
+               
+bin_hex:   ;二进制转换为十六进制-标号 
+              stroutstr2    ;通过字符串输出宏输出二进制转换为十六进制输入提示信息   
+              inax2   ;通过源进制保存-宏,将源进制2保存在CX中,并调用进制转换输入源进制数转换程序
+                     
+              endl           ;通过换行回车符输出-宏输出换行回车符,达到显示信息清晰化的效果
+                
+              stroutstr21   ;通过字符串输出宏输出二进制转换为十六进制输出显示信息  
+              outax16 ;通过目的进制保存-宏,将目的进制16保存在BX中,并调用进制转换程序并输出结果
+              
+              endl;通过换行回车符输出-宏输出换行回车符,与初始信息分开,达到显示信息清晰化的效果
+                     
+              jmpdisplay   ;无条件跳转指令,实现进制转换功能可以无限循环使用功能
+       
+bin_dec:   ;同bin_hex  
+              strout str2   
+              inax2 
+              
+              endl
+                
+              stroutstr22   
+              outax10 
+              
+              endl
+                
+              jmpdisplay 
+              
+hex_bin:   ;同bin_hex  
+              stroutstr3   
+              inax16   
+                   
+              endl
+                
+              stroutstr31   
+              outax2 
+              
+              endl
+                      
+              jmpdisplay   
+               
+hex_dec:   ;同bin_hex
+              stroutstr3   
+              inax16 
+                     
+              endl   
+              stroutstr32   
+              outax10 
+              
+              endl
+                     
+              jmpdisplay 
+                
+dec_bin:   ;同bin_hex
+              stroutstr4   
+              inax10 
+                
+              endl
+                
+              stroutstr41   
+              outax2 
+              
+              endl
+                
+              jmpdisplay 
+              
+dec_hex:   ;同bin_hex
+              stroutstr4   
+              inax10
+                 
+              endl
+                 
+              stroutstr42   
+              outax16 
+              
+              endl
+                
+              jmpdisplay 
+              
+error:     ;同bin_hex
+       strout emsg
+       jmp normal
+     
+exit:   
+              movah,4ch        
+              int21h  
+code ends 
+    end start
+ 
+;程序功能分析:
+;1.INAX XX--CALL INAXP 完成源进制保存(在CX中)和源进制数输入结果正确计算(结果放在AX中)
+;2.OUTAX XX--CALL OUTAXP 完成目的进制保存(在BX中)和进行进制转换输出正确结果
+;3.对于键盘输入数据要变为CX进制数据存储,采用循环高位先输入乘以权值CX,直到按下回车键
+;4.对于CX进制转换为BX进制,用CX进制数AX除BX取余数逆序输出得到转换结果
+;5.程序反复运用堆栈操作进行现场保护和原有数据(CX,BX)恢复,用堆栈逆序输出余数值得参考
+;6.程序定义多个输入字符-字符串,输出字符-字符串的宏,便于代码清晰,但是可读性降低了
+;7.程序的缺陷所在:输入字符缺少一个重要判断条件:进制位数值<=该进制-1
+;  例如对2进制转换为10进制测试,输入1201,理应得到5(把'2'自动过滤掉),实际结果为17,错误
+;  对INAXP进行数据流变化分析,找到该问题解决方案,实现了自动过滤无效字符的搞容错性功能
+;8.程序应用范围拓展分析:
+; JA(高于)/JB(低于)指令是针对无符号数的跳转指令
+;  换位有符号数的跳转指令JG(大于)/JL(小于)能实现符号数的数制转换
+;  但是为更加直观,需要追加输入存储信息,把用户输入的'-'号进行存储
+;  然后对用户输入的负数进行绝对值(等同于无符号数)数制转换,这样要增加判断条件
+;  比如用户输入的第一位要确定用户输入数据的正负,从而对应结果的正负
+;  这样操作后转换结果为正形式为XXXX,转换结果为负形式为-XXXX
+;9.程序应用范围拓展分析:
+;  对于小数转换,将用户输出的数据分为三部分
+;  第一部分是该进制数的符号,参考8,第二部分是整数部分,用CX进制数AX除R逆序取余数转换
+;  第三部分是小数部分,用CX进制数AX乘BX顺序取整数转换
+;  并且除R逆序取余和乘R顺序取整是针对任意进制N(N>=2的整数)的
+;  至此,用汇编语言实现复数范围内任意进制间数制转换基本实现
