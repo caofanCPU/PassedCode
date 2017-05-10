@@ -1,0 +1,4 @@
+System: Windows 10, 64bit
+Software: Matlab 2015B
+
+main function: Chromosome.m

@@ -1,0 +1,6 @@
+System: Windows 10, 64bit
+Software: Matlab 2015B
+
+main function: Sanci_main.m for Í¹ÂÖ
+
+main function: main.m  for ÇúÖá

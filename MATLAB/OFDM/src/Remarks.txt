@@ -1,0 +1,6 @@
+System: Windows 10, 64bit
+Software: Matlab 2015B
+
+main function: OFDM_OK.m
+
+practice function: OFDM727.m
