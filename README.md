@@ -1,7 +1,7 @@
-# [PassedCode](https://github.com/caofanCPU/PassedCode)
-[C, VHDL, ARM, MATLAB, ASM] of NumberLogic.
+# [PassedCode](https://github.com/caofanCPU/PassedCode)  
+[C, VHDL, ARM, Matlab, ASM] of Mathematical Logic Programming.
 
-&ensp;&emsp;&ensp;&emsp;My promgramming about C, EDA(VHDL), ASM, ARM, MATLAB during my college years.
+&ensp;&emsp;&ensp;&emsp;My promgramming about C, EDA(VHDL), ASM, ARM and Matlab during my college years.
 
 ## Version 0.4  
 ***
@@ -26,5 +26,5 @@
 ![LEDScreen](http://i2.muimg.com/588926/3bcf70b9cfa859dc.jpg)
 ***
 ## Remarks
-&ensp;&emsp;&ensp;&emsp;You should be careful to copy the source code in *.txt file* for encoding rule. If you see a lot of messy code, just try UTF-8 or ANSI to decode the source code *.txt file*.
+&ensp;&emsp;&ensp;&emsp;Be careful to copy the source code in *.txt file* for encoding rule, you can try UTF-8 or ANSI to decode the source code *.txt file* when you see a lot of messy code.
 
